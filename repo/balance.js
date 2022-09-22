@@ -90,6 +90,7 @@ function showBalanceStatus(user) {
         for (const i in items) {
             const key = items[i][0];
             const value = items[i][1];
+            if(value == 0) continue;
 
             message += `\r\n-> Owed ${value} to ${key}`;
         }
@@ -100,6 +101,7 @@ function showBalanceStatus(user) {
         for (const i in items) {
             const key = items[i][0];
             const value = items[i][1];
+            if(value == 0) continue;
 
             message += `\r\n-> Owed ${value} from ${key}`;
         }
