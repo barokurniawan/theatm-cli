@@ -42,7 +42,8 @@ function onDeposit(arg) {
         return;
     }
 
-    const ok = amountManipulation(session.user, arg.args[0], "addition");
+    const depositAmount = arg.args[0];
+    let ok = amountManipulation(session.user, depositAmount, "addition");
     if (ok) {
         // check if user has owe to other user 
         const owe = db.get("owes").find({ user: session.user }).value();
@@ -50,16 +51,25 @@ function onDeposit(arg) {
             const items = Object.entries(owe.owes);
             for (const i in items) {
                 const othUser = items[i][0];
-                const amount = items[i][1];
+                const oweAmount = items[i][1];
+                const sisaDeposit = Math.abs(depositAmount - oweAmount);
+                const amountTf = depositAmount > oweAmount ? (depositAmount - sisaDeposit) : (oweAmount - sisaDeposit);
 
                 // user has an owe to other user
                 // execute transfer function to transfer 
-                onTransfer({
-                    args: [othUser, amount]
+                ok = onTransfer({
+                    args: [othUser, amountTf]
                 });
+
+                if(ok) {
+                    balanceRepo.generatePaidOwesNotes(
+                        session.user,
+                        othUser,
+                        amountTf
+                    );
+                }
             }
         }
-
 
         balanceRepo.showBalanceStatus(session.user);
     }
@@ -112,7 +122,7 @@ function onLogin(arg) {
 function onTransfer(arg) {
     if (arg.args == undefined || arg.args.length == 0) {
         console.error(`Invalid arguments`, arg.args);
-        return;
+        return false;
     }
 
     const targetUser = arg.args[0];
@@ -121,23 +131,23 @@ function onTransfer(arg) {
     const session = db.get('session').value();
     if (session == undefined) {
         console.error(`You are not logged in`);
-        return;
+        return false;
     }
 
     if (Number.isNaN(transferAmount) || transferAmount <= 0) {
         console.error(`Invalid transfer amount`);
-        return;
+        return false;
     }
 
     const chkTargetUser = db.get("users").find({ user: targetUser }).value();
     if (chkTargetUser == undefined) {
         console.error(`account not found`);
-        return;
+        return false;
     }
 
     if (chkTargetUser.user == session.user) {
         console.error(`Invalid target account`);
-        return;
+        return false;
     }
 
     const currentBalance = balanceRepo.getUserBalanceAmount(session.user);
@@ -145,17 +155,18 @@ function onTransfer(arg) {
     let ok = amountManipulation(session.user, transferAmount, "deduction", true, chkTargetUser.user);
     if (!ok) {
         console.error(`deduction failed`);
-        return;
+        return false;
     }
 
     ok = amountManipulation(chkTargetUser.user, amountTf, "addition", true);
     if (!ok) {
         console.error(`transfer failed`);
-        return;
+        return false;
     }
 
     console.log(`Transferred ${amountTf} to ${chkTargetUser.user}`);
     balanceRepo.showBalanceStatus(session.user);
+    return true;
 }
 
 module.exports = {

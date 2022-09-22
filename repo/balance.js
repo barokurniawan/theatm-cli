@@ -10,7 +10,7 @@ function owedNotes(user, targetUser, amount) {
     let item = owe.owed == null ? {} : owe.owed;
     // check if user already has an owe to target user 
     if (item[user]) {
-        item[user] = parseFloat(owe.owed[user]) + (amount * -1);
+        item[user] = parseFloat(owe.owed[user]) + Math.abs(amount);
     } else {
         item[user] = (amount * -1);
     }
@@ -27,12 +27,12 @@ function generateOwesNotes(user, targetUser, amount) {
         owe = db.get('owes').find({ user: user }).value();
     }
 
+    // check if user already has an owe to target user
     let item = owe.owes == null ? {} : owe.owes;
-    // check if user already has an owe to target user 
     if (item[targetUser]) {
-        item[targetUser] = parseFloat(owe.owes[targetUser]) + (amount * -1);
+        item[targetUser] = parseFloat(owe.owes[targetUser]) + Math.abs(amount);
     } else {
-        item[targetUser] = (amount * -1);
+        item[targetUser] = Math.abs(amount);
     }
 
     db.get('owes').find({ user: user }).assign({
@@ -40,6 +40,44 @@ function generateOwesNotes(user, targetUser, amount) {
     }).write();
 
     owedNotes(user, targetUser, amount);
+}
+
+function paidOwedNotes(user, targetUser, amount) {
+    let owe = db.get('owes').find({ user: targetUser }).value();
+    if (owe == undefined) {
+        db.get('owes').push({ user: targetUser, owes: null, owed: null }).write();
+        owe = db.get('owes').find({ user: targetUser }).value();
+    }
+
+    // check if user already has an owe to target user
+    let item = owe.owed == null ? {} : owe.owed;
+    if (item[user]) {
+        item[user] = parseFloat(owe.owed[user]) - Math.abs(amount);
+    }
+
+    db.get('owes').find({ user: targetUser }).assign({
+        owed: item
+    }).write();
+}
+
+function generatePaidOwesNotes(user, targetUser, amount) {
+    let owe = db.get('owes').find({ user: user }).value();
+    if (owe == undefined) {
+        db.get('owes').push({ user: user, owes: null, owed: null }).write();
+        owe = db.get('owes').find({ user: user }).value();
+    }
+
+    // check if user already has an owe to target user 
+    let item = owe.owes == null ? {} : owe.owes;
+    if (item[targetUser]) {
+        item[targetUser] = parseFloat(owe.owes[targetUser]) - Math.abs(amount);
+    }
+
+    db.get('owes').find({ user: user }).assign({
+        owes: item
+    }).write();
+
+    paidOwedNotes(user, targetUser, amount);
 }
 
 function showBalanceStatus(user) {
@@ -123,4 +161,5 @@ module.exports = {
     addition,
     deduction,
     getUserBalanceAmount,
+    generatePaidOwesNotes,
 }
