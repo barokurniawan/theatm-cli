@@ -36,16 +36,21 @@ function amountManipulation(userAccount, balanceAmount, type, isTransfer = false
 }
 
 function onDeposit(arg) {
-    const session = db.get('session').value();
+    let showBalance = true;
+    let session = db.get('session').value();
     if (session == undefined) {
         console.error("You are not logged in");
         return;
     }
 
+    if(arg.user) {
+        session = arg.user;
+        showBalance = false;
+    }
+
     const depositAmount = arg.args[0];
     let ok = amountManipulation(session.user, depositAmount, "addition");
     if (ok) {
-        let showBalance = true;
         // check if user has owe to other user 
         const owe = db.get("owes").find({ user: session.user }).value();
         if (owe != undefined && owe.owes != null) {
@@ -53,17 +58,17 @@ function onDeposit(arg) {
             for (const i in items) {
                 const othUser = items[i][0];
                 const oweAmount = items[i][1];
-                const sisaDeposit = Math.abs(depositAmount - oweAmount);
-                const amountTf = depositAmount > oweAmount ? (depositAmount - sisaDeposit) : (oweAmount - sisaDeposit);
 
                 if(oweAmount <= 0) {
                     continue;
                 }
 
-                showBalance = false;
+                const sisaDeposit = Math.abs(depositAmount - oweAmount);
+                const amountTf = depositAmount > oweAmount ? (depositAmount - sisaDeposit) : (oweAmount - sisaDeposit);
                 // user has an owe to other user
                 // execute transfer function to transfer 
                 ok = onTransfer({
+                    user: session,
                     args: [othUser, amountTf]
                 });
 
@@ -126,6 +131,7 @@ function onLogin(arg) {
 }
 
 function onTransfer(arg) {
+    let showBalance = true;
     if (arg.args == undefined || arg.args.length == 0) {
         console.error(`Invalid arguments`, arg.args);
         return false;
@@ -134,10 +140,15 @@ function onTransfer(arg) {
     const targetUser = arg.args[0];
     const transferAmount = parseFloat(arg.args[1]);
 
-    const session = db.get('session').value();
+    let session = db.get('session').value();
     if (session == undefined) {
         console.error(`You are not logged in`);
         return false;
+    }
+
+    if(arg.user) {
+        session = arg.user;
+        showBalance = false;
     }
 
     if (Number.isNaN(transferAmount) || transferAmount <= 0) {
@@ -165,14 +176,23 @@ function onTransfer(arg) {
         return false;
     }
 
-    ok = amountManipulation(chkTargetUser.user, amountTf, "addition", true);
-    if (!ok) {
-        console.error(`transfer failed`);
-        return false;
+    console.log(`Transferred ${amountTf} to ${chkTargetUser.user}`);
+
+    onDeposit({
+        user: chkTargetUser,
+        args: [amountTf]
+    });
+
+    // ok = amountManipulation(chkTargetUser.user, amountTf, "addition", true);
+    // if (!ok) {
+    //     console.error(`transfer failed`);
+    //     return false;
+    // }
+
+    if(showBalance) {
+        balanceRepo.showBalanceStatus(session.user);
     }
 
-    console.log(`Transferred ${amountTf} to ${chkTargetUser.user}`);
-    balanceRepo.showBalanceStatus(session.user);
     return true;
 }
 
