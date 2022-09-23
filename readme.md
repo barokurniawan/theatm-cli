@@ -11,7 +11,7 @@ You are asked to develop a Command Line Interface (CLI) to simulate an interacti
 
 
 ## How to run
-1. Before run unit test, you have to delete file `db.json` if exists and execute `npm run start`
+1. Before run unit test, you have to delete file `db.json` if exists and execute `npm run test`
 2. if you want to make a user as `premier` just modify the users field in `db.json` file and add `"premier": true` to object model
 
 
