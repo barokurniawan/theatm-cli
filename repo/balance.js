@@ -81,33 +81,35 @@ function generatePaidOwesNotes(user, targetUser, amount) {
 }
 
 function showBalanceStatus(user) {
-    const owes = db.get("owes").find({ user: user }).value();
-    const balanceAmount = getUserBalanceAmount(user);
-
-    let message = `Your balance is ${balanceAmount}`;
-    if (owes && owes.owes != null) {
-        let items = Object.entries(owes.owes);
-        for (const i in items) {
-            const key = items[i][0];
-            const value = items[i][1];
-            if(value == 0) continue;
-
-            message += `\r\n-> Owed ${value} to ${key}`;
+    setTimeout(() => {
+        const owes = db.get("owes").find({ user: user }).value();
+        const balanceAmount = getUserBalanceAmount(user);
+    
+        let message = `Your balance is ${balanceAmount}`;
+        if (owes && owes.owes != null) {
+            let items = Object.entries(owes.owes);
+            for (const i in items) {
+                const key = items[i][0];
+                const value = items[i][1];
+                if(value == 0) continue;
+    
+                message += `\r\n-> Owed ${value} to ${key}`;
+            }
         }
-    }
-
-    if (owes && owes.owed != null) {
-        let items = Object.entries(owes.owed);
-        for (const i in items) {
-            const key = items[i][0];
-            const value = items[i][1];
-            if(value == 0) continue;
-
-            message += `\r\n-> Owed ${value} from ${key}`;
+    
+        if (owes && owes.owed != null) {
+            let items = Object.entries(owes.owed);
+            for (const i in items) {
+                const key = items[i][0];
+                const value = items[i][1];
+                if(value == 0) continue;
+    
+                message += `\r\n-> Owed ${value} from ${key}`;
+            }
         }
-    }
-
-    console.log(message);
+    
+        console.log(message);
+    }, 500);
 }
 
 function addition(userAccount, amount) {

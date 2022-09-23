@@ -45,6 +45,7 @@ function onDeposit(arg) {
     const depositAmount = arg.args[0];
     let ok = amountManipulation(session.user, depositAmount, "addition");
     if (ok) {
+        let showBalance = true;
         // check if user has owe to other user 
         const owe = db.get("owes").find({ user: session.user }).value();
         if (owe != undefined && owe.owes != null) {
@@ -55,6 +56,11 @@ function onDeposit(arg) {
                 const sisaDeposit = Math.abs(depositAmount - oweAmount);
                 const amountTf = depositAmount > oweAmount ? (depositAmount - sisaDeposit) : (oweAmount - sisaDeposit);
 
+                if(oweAmount <= 0) {
+                    continue;
+                }
+
+                showBalance = false;
                 // user has an owe to other user
                 // execute transfer function to transfer 
                 ok = onTransfer({
@@ -71,7 +77,7 @@ function onDeposit(arg) {
             }
         }
 
-        balanceRepo.showBalanceStatus(session.user);
+        if(showBalance) balanceRepo.showBalanceStatus(session.user);
     }
 }
 
@@ -136,6 +142,7 @@ function onTransfer(arg) {
 
     if (Number.isNaN(transferAmount) || transferAmount <= 0) {
         console.error(`Invalid transfer amount`);
+        console.error(`transferAmount: `, transferAmount);
         return false;
     }
 
