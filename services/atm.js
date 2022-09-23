@@ -1,8 +1,10 @@
+const { default_fee } = require("../configs/atm");
 const { db } = require("../configs/db");
 const balanceRepo = require("../repo/balance");
+const { getSession, getUserByUsername, isPremierUser } = require("../repo/user");
 
 function amountManipulation(userAccount, balanceAmount, type, isTransfer = false, targetUser = "") {
-    if (!balanceAmount) {
+    if (balanceAmount == undefined) {
         console.error(`balance is required`);
         return false;
     }
@@ -16,7 +18,7 @@ function amountManipulation(userAccount, balanceAmount, type, isTransfer = false
     try {
         switch (type) {
             case "addition":
-                balanceRepo.addition(userAccount, amount);
+                balanceRepo.addition(userAccount, amount, isTransfer);
                 break;
 
             case "deduction":
@@ -48,8 +50,9 @@ function onDeposit(arg) {
         showBalance = false;
     }
 
+    const isTransfer = arg.isTransfer == undefined ? false : arg.isTransfer;
     const depositAmount = arg.args[0];
-    let ok = amountManipulation(session.user, depositAmount, "addition");
+    let ok = amountManipulation(session.user, depositAmount, "addition", isTransfer);
     if (ok) {
         // check if user has owe to other user 
         const owe = db.get("owes").find({ user: session.user }).value();
@@ -138,9 +141,9 @@ function onTransfer(arg) {
     }
 
     const targetUser = arg.args[0];
-    const transferAmount = parseFloat(arg.args[1]);
+    let transferAmount = parseFloat(arg.args[1]);
 
-    let session = db.get('session').value();
+    let session = getSession();
     if (session == undefined) {
         console.error(`You are not logged in`);
         return false;
@@ -157,7 +160,7 @@ function onTransfer(arg) {
         return false;
     }
 
-    const chkTargetUser = db.get("users").find({ user: targetUser }).value();
+    const chkTargetUser = getUserByUsername(targetUser);
     if (chkTargetUser == undefined) {
         console.error(`account not found`);
         return false;
@@ -169,7 +172,26 @@ function onTransfer(arg) {
     }
 
     const currentBalance = balanceRepo.getUserBalanceAmount(session.user);
-    const amountTf = ((currentBalance - transferAmount) < 0) ? Math.abs(transferAmount - (transferAmount - currentBalance)) : transferAmount;
+    let amountTf = ((currentBalance - transferAmount) < 0) ? Math.abs(transferAmount - (transferAmount - currentBalance)) : transferAmount;
+    let transferFee = default_fee;
+    const mIsPremierUser = isPremierUser(session.user);
+    if (mIsPremierUser) {
+        transferFee = 0;
+    }
+
+    // jika saldo lebih besar dari admin+nominal transfer
+    // maka biaya admin di tambahkan ke nominal transfer
+    if(currentBalance > (transferFee + amountTf)) {
+        transferAmount = transferFee + amountTf;
+    }
+
+    // jika total saldo sama dengan jumlah transfer 
+    // maka biaya admin di potong dari nominal transfer
+    if(currentBalance == amountTf) {
+        transferAmount = transferAmount + transferFee;
+        amountTf = amountTf - transferFee;
+    }
+
     let ok = amountManipulation(session.user, transferAmount, "deduction", true, chkTargetUser.user);
     if (!ok) {
         console.error(`deduction failed`);
@@ -180,7 +202,8 @@ function onTransfer(arg) {
 
     onDeposit({
         user: chkTargetUser,
-        args: [amountTf]
+        args: [amountTf],
+        isTransfer: true
     });
 
     // ok = amountManipulation(chkTargetUser.user, amountTf, "addition", true);
@@ -202,4 +225,5 @@ module.exports = {
     onLogin,
     onLogout,
     onTransfer,
+    amountManipulation
 };

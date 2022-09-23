@@ -7,6 +7,7 @@ db.defaults({
     users: [
         { user: "john" },
         { user: "doe" },
+        { user: "asep", premier: true }
     ],
     balance: [],
     owes: [],

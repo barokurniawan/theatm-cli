@@ -1,4 +1,6 @@
+const { default_fee } = require("../configs/atm");
 const { db } = require("../configs/db");
+const { isPremierUser } = require("./user");
 
 function owedNotes(user, targetUser, amount) {
     let owe = db.get('owes').find({ user: targetUser }).value();
@@ -84,35 +86,35 @@ function showBalanceStatus(user) {
     setTimeout(() => {
         const owes = db.get("owes").find({ user: user }).value();
         const balanceAmount = getUserBalanceAmount(user);
-    
+
         let message = `Your balance is ${balanceAmount}`;
         if (owes && owes.owes != null) {
             let items = Object.entries(owes.owes);
             for (const i in items) {
                 const key = items[i][0];
                 const value = items[i][1];
-                if(value == 0) continue;
-    
+                if (value == 0) continue;
+
                 message += `\r\n-> Owed ${value} to ${key}`;
             }
         }
-    
+
         if (owes && owes.owed != null) {
             let items = Object.entries(owes.owed);
             for (const i in items) {
                 const key = items[i][0];
                 const value = items[i][1];
-                if(value == 0) continue;
-    
+                if (value == 0) continue;
+
                 message += `\r\n-> Owed ${value} from ${key}`;
             }
         }
-    
+
         console.log(message);
     }, 500);
 }
 
-function addition(userAccount, amount) {
+function addition(userAccount, amount, isTransfer = false) {
     let currentBalance = getUserBalanceAmount(userAccount);
     currentBalance = parseFloat(currentBalance) + amount;
 

@@ -10,6 +10,10 @@
 You are asked to develop a Command Line Interface (CLI) to simulate an interaction of an ATM with a retail bank.
 
 
+## How to run
+1. Before run unit test, you have to delete file `db.json` if exists and execute `npm run start`
+2. if you want to make a user as `premier` just modify the users field in `db.json` file and add `"premier": true` to object model
+
 
 ## Commands
 
@@ -154,6 +158,3 @@ $ logout
 Goodbye, Bob!
 
 ```
-
-OPTION_1_ATM.md
-Menampilkan OPTION_1_ATM.md.
